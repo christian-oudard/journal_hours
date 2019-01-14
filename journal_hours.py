@@ -2,7 +2,7 @@
 
 import sys
 
-from time import strptime
+import time
 from datetime import datetime, timedelta
 
 date_format = '%Y-%m-%d'
@@ -71,7 +71,7 @@ def parse_time(line, current_date):
         return None
 
     try:
-        t = strptime(time_string, time_format)
+        t = time.strptime(time_string, time_format)
     except ValueError:
         return None
 
@@ -90,9 +90,9 @@ def interval_sum(intervals):
 
 
 def format_timedelta(td):
-    hours, rem = divmod(td.seconds, (60 * 60))
-    minutes, seconds = divmod(rem, 60)
-    return '{}h{:02d}m'.format(hours, minutes)
+    hours, rem = divmod(td.total_seconds(), (60 * 60))
+    minutes, seconds_ = divmod(rem, 60)
+    return '{}h{:02d}m'.format(round(hours), round(minutes))
 
 
 def flatten(list_of_lists):
@@ -105,22 +105,42 @@ if __name__ == '__main__':
     with open(sys.argv[1]) as f:
         lines = [ l.strip() for l in f.readlines() ]
 
+    if len(sys.argv) >= 4:
+        start_date = datetime.strptime(sys.argv[2], date_format)
+        end_date = datetime.strptime(sys.argv[3], date_format)
+    else:
+        start_date = None
+        end_date = None
+
     intervals_by_date = process(lines)
-    total_seconds = 0
+
+    all_intervals = []
     for (d, intervals) in intervals_by_date:
         if len(intervals) == 0:
             continue
+        if start_date is not None and d < start_date:
+            continue
+        if end_date is not None and d >= end_date + timedelta(days=1):
+            continue
+        all_intervals.extend(intervals)
         elapsed = interval_sum(intervals)
         print('{}: {}'.format(d.strftime(date_format), format_timedelta(elapsed)))
         for (start, end) in intervals:
             print('  {} - {}'.format(start.strftime(time_format), end.strftime(time_format)))
         print()
 
-    all_intervals = flatten( ivls for (d_, ivls) in intervals_by_date )
     total_elapsed = interval_sum(all_intervals)
     total_seconds = total_elapsed.days * 60 + total_elapsed.seconds
 
-    print('Total: {} ({:.2f} hours)'.format(
+    if start_date is None:
+        print('Total time worked:')
+    else:
+        print('Total time worked from {} to {}:'.format(
+            start_date.strftime(date_format),
+            end_date.strftime(date_format),
+        ))
+
+    print('  {:.2f} hours ({})'.format(
+        total_elapsed.total_seconds() / (60 * 60),
         format_timedelta(total_elapsed),
-        total_seconds / (60 * 60),
     ))
