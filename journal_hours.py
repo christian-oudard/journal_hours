@@ -42,7 +42,8 @@ def process(lines):
         else:  # end
             if len(current_interval) == 1:
                 current_interval.append(t)
-                assert current_interval[0] < current_interval[1]
+                if not (current_interval[0] < current_interval[1]):
+                    raise IntervalError('On line {}, found a backward interval.'.format(line_number))
                 intervals_by_date[-1][1].append(current_interval)
                 current_interval = []
             else:
