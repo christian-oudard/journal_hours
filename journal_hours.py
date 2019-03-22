@@ -18,9 +18,14 @@ def main():
         lines = [ l.strip() for l in f.readlines() ]
 
     # Parse start and end dates if they are given. Inclusive date range.
-    if len(sys.argv) >= 4:
+    if len(sys.argv) == 4:
         start_date = parse_date(sys.argv[2])
         end_date = parse_date(sys.argv[3])
+        assert start_date is not None
+        assert end_date is not None
+    elif len(sys.argv) == 3:  # Single date for start and end.
+        start_date = parse_date(sys.argv[2])
+        end_date = parse_date(sys.argv[2])
         assert start_date is not None
         assert end_date is not None
     else:
@@ -40,9 +45,8 @@ def main():
         all_intervals.extend(intervals)
         elapsed = interval_sum(intervals)
         print('{}: {}'.format(d.strftime(date_format), format_timedelta(elapsed)))
-        for (start, end) in intervals:
-            print('  {} - {}'.format(start.strftime(time_format), end.strftime(time_format)))
-        print()
+        # for (start, end) in intervals:
+        #     print('  {} - {}'.format(start.strftime(time_format), end.strftime(time_format)))
 
     total_elapsed = interval_sum(all_intervals)
 
