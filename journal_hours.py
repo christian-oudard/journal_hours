@@ -105,13 +105,13 @@ def process(lines):
             continue
 
         # Ensure that each timestamp is part of a pair.
-        is_start, t = time_result
-        if is_start:
+        action, t = time_result
+        if action == 'start':
             if len(current_interval) == 0:
                 current_interval.append(t)
             else:
                 raise IntervalError('On line {}, found unexpected interval start.'.format(line_number))
-        else:  # end
+        elif action == 'end':
             if len(current_interval) == 1:
                 current_interval.append(t)
                 if not (current_interval[0] < current_interval[1]):
@@ -129,11 +129,7 @@ def parse_time(line, current_date):
         return None
 
     action, time_string = line.split(' ', 1)
-    if action == 'start':
-        is_start = True
-    elif action == 'end':
-        is_start = False
-    else:
+    if action not in ['start', 'end']:
         return None
 
     try:
@@ -145,7 +141,7 @@ def parse_time(line, current_date):
         raise IntervalError('Found interval start before any date markers.')
 
     t = assemble_datetime(current_date, t)
-    return (is_start, t)
+    return (action, t)
 
 
 def interval_sum(intervals):
