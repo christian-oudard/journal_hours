@@ -17,8 +17,14 @@ def main():
     with open(sys.argv[1]) as f:
         lines = [ l.strip() for l in f.readlines() ]
 
+    # Parse hourly rate.
+    if len(sys.argv) == 5:
+        hourly_rate = int(sys.argv[4])
+    else:
+        hourly_rate = None
+
     # Parse start and end dates if they are given. Inclusive date range.
-    if len(sys.argv) == 4:
+    if len(sys.argv) >= 4:
         start_date = parse_date(sys.argv[2])
         end_date = parse_date(sys.argv[3])
         assert start_date is not None
@@ -44,7 +50,20 @@ def main():
             continue
         all_intervals.extend(intervals)
         elapsed = interval_sum(intervals)
-        print('{}: {}'.format(d.strftime(date_format), format_timedelta(elapsed)))
+        if hourly_rate is None:
+            print('{}: {}'.format(
+                d.strftime(date_format),
+                format_timedelta(elapsed),
+            ))
+        else:
+            hours = elapsed.total_seconds() / (60 * 60)
+            amount = hours * hourly_rate
+            print('{}: {} {:>8}'.format(
+                d.strftime(date_format),
+                format_timedelta(elapsed),
+                '${:.2f}'.format(amount),
+            ))
+
         # for (start, end) in intervals:
         #     print('  {} - {}'.format(start.strftime(time_format), end.strftime(time_format)))
 
@@ -58,10 +77,12 @@ def main():
             end_date.strftime(date_format),
         ))
 
-    print('  {:.2f} hours ({})'.format(
-        total_elapsed.total_seconds() / (60 * 60),
-        format_timedelta(total_elapsed),
-    ))
+    total_hours = total_elapsed.total_seconds() / (60 * 60)
+    print('  {:.2f} hours ({})'.format(total_hours, format_timedelta(total_elapsed)))
+
+    if hourly_rate is not None:
+        print('Hourly rate: ${}'.format(hourly_rate))
+        print('Total due: ${:.2f}'.format(total_hours * hourly_rate))
 
 
 def process(lines):
