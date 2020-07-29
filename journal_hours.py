@@ -88,7 +88,7 @@ def main():
 def process(lines):
     current_date = None
     current_interval = []
-    intervals_by_date = []
+    intervals_by_date = []  # [(current_date, [(start, end)])]
 
     for (line_number, line) in enumerate(lines):
         line = line.strip()
@@ -120,6 +120,14 @@ def process(lines):
                 current_interval = []
             else:
                 raise IntervalError('On line {}, found unexpected interval end.'.format(line_number))
+
+    # If the ending interval is open and on the current day, simulate closing the interval right now.
+    if len(current_interval) == 1:
+        if current_date == date.today():
+            now = datetime.now()
+            if current_interval[0] < now:
+                current_interval.append(now)
+                intervals_by_date[-1][1].append(current_interval)
 
     return intervals_by_date
 
