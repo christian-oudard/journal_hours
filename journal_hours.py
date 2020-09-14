@@ -17,19 +17,11 @@ class IntervalError(ValueError):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('journal_file')
-
     parser.add_argument('start', nargs='?')
     parser.add_argument('end', nargs='?')
     parser.add_argument('-v', action='store_true')
-
     parser.add_argument('--rate', type=int)
     args = parser.parse_args()
-
-    # Parse hourly rate.
-    if len(sys.argv) == 5:
-        hourly_rate = int(sys.argv[4])
-    else:
-        hourly_rate = None
 
     # Parse start and end dates if they are given. Inclusive date range.
     start_date = parse_date(args.start)
