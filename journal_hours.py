@@ -1,8 +1,8 @@
 #! /usr/bin/env python3
 
 import argparse
+import json
 import sys
-
 import time
 from datetime import date, datetime, timedelta
 
@@ -16,11 +16,12 @@ class IntervalError(ValueError):
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('-v', dest='verbose', action='store_true')
+    parser.add_argument('--json', action='store_true')
+    parser.add_argument('--rate', type=int)
     parser.add_argument('journal_file')
     parser.add_argument('start', nargs='?')
     parser.add_argument('end', nargs='?')
-    parser.add_argument('-v', action='store_true')
-    parser.add_argument('--rate', type=int)
     args = parser.parse_args()
 
     # Parse start and end dates if they are given. Inclusive date range.
@@ -32,16 +33,30 @@ def main():
     # Process journal file.
     with open(args.journal_file) as f:
         lines = [ l.strip() for l in f.readlines() ]
+
     intervals_by_date = process(lines)
+    intervals_by_date = [
+        (d, intervals)
+        for (d, intervals) in intervals_by_date
+        if (
+            len(intervals) > 0
+            and (start_date is None or d >= start_date)
+            and (end_date is None or d <= end_date)
+        )
+    ]
+
+    if args.json:
+        json_data = {}
+        for (d, intervals) in intervals_by_date:
+            json_data[force_timestamp(d)] = [
+                (force_timestamp(start), force_timestamp(end))
+                for (start, end) in intervals
+            ]
+        print(json.dumps(json_data))
+        return
 
     all_intervals = []
     for (d, intervals) in intervals_by_date:
-        if len(intervals) == 0:
-            continue
-        if start_date is not None and d < start_date:
-            continue
-        if end_date is not None and d >= end_date + timedelta(days=1):
-            continue
         all_intervals.extend(intervals)
         elapsed = interval_sum(intervals)
 
@@ -55,7 +70,7 @@ def main():
             out_line += ' {:>8}'.format('${:.2f}'.format(amount))
         print(out_line)
 
-        if args.v:
+        if args.verbose:
             for (start, end) in intervals:
                 print('  {} - {}'.format(start.strftime(time_format), end.strftime(time_format)))
 
@@ -108,7 +123,7 @@ def process(lines):
                 current_interval.append(t)
                 if not (current_interval[0] < current_interval[1]):
                     raise IntervalError('On line {}, found a backward interval.'.format(line_number))
-                intervals_by_date[-1][1].append(current_interval)
+                intervals_by_date[-1][1].append(tuple(current_interval))
                 current_interval = []
             else:
                 raise IntervalError('On line {}, found unexpected interval end.'.format(line_number))
@@ -119,7 +134,7 @@ def process(lines):
             now = datetime.now()
             if current_interval[0] < now:
                 current_interval.append(now)
-                intervals_by_date[-1][1].append(current_interval)
+                intervals_by_date[-1][1].append(tuple(current_interval))
 
     return intervals_by_date
 
@@ -169,6 +184,10 @@ def force_date(d):
     return date(d.year, d.month, d.day)
 
 
+def force_timestamp(d):
+    return int(time.mktime(d.timetuple()))
+
+
 def assemble_datetime(d, t):
     """Make a datetime out of a date and a time. Ignores seconds and microseconds."""
     return datetime(d.year, d.month, d.day, t.tm_hour, minute=t.tm_min)
@@ -178,6 +197,7 @@ def flatten(list_of_lists):
     for sublist in list_of_lists:
         for item in sublist:
             yield item
+
 
 
 if __name__ == '__main__':
