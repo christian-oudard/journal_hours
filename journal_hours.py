@@ -8,6 +8,7 @@ from datetime import date, datetime, timedelta
 
 date_format = '%Y-%m-%d'
 time_format = '%H:%M'
+display_time_format = '%I:%M %p'
 
 
 class IntervalError(ValueError):
@@ -72,7 +73,7 @@ def main():
 
         if args.verbose:
             for (start, end) in intervals:
-                print('  {} - {}'.format(start.strftime(time_format), end.strftime(time_format)))
+                print('  {} - {}'.format(start.strftime(display_time_format), end.strftime(display_time_format)))
 
     total_elapsed = interval_sum(all_intervals)
 
