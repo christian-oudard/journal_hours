@@ -105,6 +105,8 @@ def process(lines):
         d = parse_date(line)
         if d is not None:
             current_date = d
+            if len(intervals_by_date) > 0 and current_date <= intervals_by_date[-1][0]:
+                raise IntervalError('On line {}, the date {} was out of order.'.format(line_number, d.strftime(date_format)))
             intervals_by_date.append((current_date, []))
 
         # Try to find a start or finish time.
