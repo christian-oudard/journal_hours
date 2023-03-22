@@ -20,6 +20,7 @@ def main():
     parser.add_argument('-v', dest='verbose', action='store_true')
     parser.add_argument('--json', action='store_true')
     parser.add_argument('--rate', type=int)
+    parser.add_argument('--average', action='store_true')
     parser.add_argument('journal_file')
     parser.add_argument('start', nargs='?')
     parser.add_argument('end', nargs='?')
@@ -91,6 +92,12 @@ def main():
     if args.rate is not None:
         print('Hourly rate: ${}'.format(args.rate))
         print('Total due: ${:.2f}'.format(total_hours * args.rate))
+
+    if args.average:
+        days = (end_date - start_date).days + 1
+        weeks = days / 7
+        average = total_elapsed / weeks
+        print('Average hours per week: {:.2f} ({})'.format(average.total_seconds() / (60 * 60), format_timedelta(average)))
 
 
 def process(lines):
