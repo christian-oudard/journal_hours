@@ -6,9 +6,12 @@ import sys
 import time
 from datetime import date, datetime, timedelta
 
-date_format = '%Y-%m-%d'
-time_format = '%H:%M'
-display_time_format = '%I:%M %p'
+DATE_FORMAT = '%Y-%m-%d'
+TIME_FORMAT = '%H:%M'
+DISPLAY_TIME_FORMAT = '%I:%M %p'
+
+SHOW_INTERVALS = False
+SHOW_DAILY_EARNINGS = False
 
 
 class IntervalError(ValueError):
@@ -17,7 +20,6 @@ class IntervalError(ValueError):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-v', dest='verbose', action='store_true')
     parser.add_argument('--json', action='store_true')
     parser.add_argument('--rate', type=int)
     parser.add_argument('--average', action='store_true')
@@ -57,43 +59,47 @@ def main():
         print(json.dumps(json_data))
         return
 
+    if start_date is not None:
+        print('Dates: {} to {}'.format(
+            start_date.strftime(DATE_FORMAT),
+            end_date.strftime(DATE_FORMAT),
+        ))
+
+    print()
+    print('Hours worked:')
     all_intervals = []
     for (d, intervals) in intervals_by_date:
         all_intervals.extend(intervals)
         elapsed = interval_sum(intervals)
 
-        out_line = '{}: {}'.format(
-            d.strftime(date_format),
+        out_line = '    {}: {}'.format(
+            d.strftime(DATE_FORMAT),
             format_timedelta(elapsed),
         )
-        if args.rate is not None:
+        if args.rate is not None and SHOW_DAILY_EARNINGS:
             hours = elapsed.total_seconds() / (60 * 60)
             amount = hours * args.rate
             out_line += ' {:>8}'.format('${:.2f}'.format(amount))
+
         print(out_line)
 
-        if args.verbose:
+        if SHOW_INTERVALS:
             for (start, end) in intervals:
-                print('  {} - {}'.format(start.strftime(display_time_format), end.strftime(display_time_format)))
+                print('      {} - {}'.format(
+                    start.strftime(DISPLAY_TIME_FORMAT),
+                    end.strftime(DISPLAY_TIME_FORMAT),
+                ))
 
+    print()
     total_elapsed = interval_sum(all_intervals)
-
-    if start_date is None:
-        print('Total time worked:')
-    else:
-        print('Total time worked from {} to {}:'.format(
-            start_date.strftime(date_format),
-            end_date.strftime(date_format),
-        ))
-
     total_hours = total_elapsed.total_seconds() / (60 * 60)
-    print('  {:.2f} hours ({})'.format(total_hours, format_timedelta(total_elapsed)))
+    print('Total time worked: {:.2f} hours ({})'.format(total_hours, format_timedelta(total_elapsed)))
 
     if args.rate is not None:
         print('Hourly rate: ${}'.format(args.rate))
         print('Total due: ${:.2f}'.format(total_hours * args.rate))
 
-    if args.average:
+    if args.average and start_date is not None:
         days = (end_date - start_date).days + 1
         weeks = days / 7
         average = total_elapsed / weeks
@@ -113,7 +119,7 @@ def process(lines):
         if d is not None:
             current_date = d
             if len(intervals_by_date) > 0 and current_date <= intervals_by_date[-1][0]:
-                raise IntervalError('On line {}, the date {} was out of order.'.format(line_number, d.strftime(date_format)))
+                raise IntervalError('On line {}, the date {} was out of order.'.format(line_number, d.strftime(DATE_FORMAT)))
             intervals_by_date.append((current_date, []))
 
         # Try to find a start or finish time.
@@ -158,7 +164,7 @@ def parse_time(line, current_date):
         return None
 
     try:
-        t = time.strptime(time_string, time_format)
+        t = time.strptime(time_string, TIME_FORMAT)
     except ValueError:
         return None
 
@@ -184,7 +190,7 @@ def format_timedelta(td):
 
 def parse_date(s):
     try:
-        return force_date(datetime.strptime(s, date_format))
+        return force_date(datetime.strptime(s, DATE_FORMAT))
     except (TypeError, ValueError):
         return None
 
