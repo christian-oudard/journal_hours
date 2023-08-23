@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--json', action='store_true')
     parser.add_argument('--rate', type=int)
     parser.add_argument('--average', action='store_true')
+    parser.add_argument('--retainer', type=int)
     parser.add_argument('journal_file')
     parser.add_argument('start', nargs='?')
     parser.add_argument('end', nargs='?')
@@ -33,6 +34,8 @@ def main():
     end_date = parse_date(args.end)
     if end_date is None:
         end_date = date.today()
+    if end_date < start_date:
+        raise ValueError('End date must be after start date.')
 
     # Process journal file.
     with open(args.journal_file) as f:
@@ -65,9 +68,8 @@ def main():
             end_date.strftime(DATE_FORMAT),
         ))
 
-    print()
-    print('Hours worked:')
     all_intervals = []
+    out_lines = []
     for (d, intervals) in intervals_by_date:
         all_intervals.extend(intervals)
         elapsed = interval_sum(intervals)
@@ -81,29 +83,46 @@ def main():
             amount = hours * args.rate
             out_line += ' {:>8}'.format('${:.2f}'.format(amount))
 
-        print(out_line)
+        out_lines.append(out_line)
 
         if SHOW_INTERVALS:
             for (start, end) in intervals:
-                print('      {} - {}'.format(
+                out_lines.append('      {} - {}'.format(
                     start.strftime(DISPLAY_TIME_FORMAT),
                     end.strftime(DISPLAY_TIME_FORMAT),
                 ))
 
-    print()
     total_elapsed = interval_sum(all_intervals)
     total_hours = total_elapsed.total_seconds() / (60 * 60)
+    if total_elapsed == timedelta(0):
+        print('No hours recorded.')
+        sys.exit(1)
+
+    print()
+    print('Hours worked:')
+    for line in out_lines:
+        print(line)
+    print()
     print('Total time worked: {:.2f} hours ({})'.format(total_hours, format_timedelta(total_elapsed)))
 
+    total_due = None
     if args.rate is not None:
         print('Hourly rate: ${}'.format(args.rate))
-        print('Total due: ${:.2f}'.format(total_hours * args.rate))
+        total_due = total_hours * args.rate
+
+    if args.retainer:
+        print('Gross total: ${:.2f}'.format(total_due))
+        print('Already-paid monthly retainer: ${}'.format(args.retainer))
+        total_due = max(0, total_due - args.retainer)
 
     if args.average and start_date is not None:
         days = (end_date - start_date).days + 1
         weeks = days / 7
         average = total_elapsed / weeks
         print('Average hours per week: {:.2f} ({})'.format(average.total_seconds() / (60 * 60), format_timedelta(average)))
+
+    if total_due is not None:
+        print('Total due: ${:.2f}'.format(total_due))
 
 
 def process(lines):
