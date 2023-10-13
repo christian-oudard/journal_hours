@@ -29,12 +29,12 @@ def main():
     parser.add_argument('end', nargs='?')
     args = parser.parse_args()
 
-    # Parse start and end dates if they are given. Inclusive date range.
+    # Parse start and end dates if they are given (inclusive date range).
     start_date = parse_date(args.start)
     end_date = parse_date(args.end)
     if end_date is None:
         end_date = date.today()
-    if end_date < start_date:
+    if start_date is not None and end_date < start_date:
         raise ValueError('End date must be after start date.')
 
     # Process journal file.
@@ -52,6 +52,13 @@ def main():
         )
     ]
 
+    # Fill start date if it is not given.
+    if start_date is None:
+        if len(intervals_by_date) == 0:
+            raise ValueError('No intervals found.')
+        start_date = intervals_by_date[0][0]
+
+    # Create JSON output if requested.
     if args.json:
         json_data = {}
         for (d, intervals) in intervals_by_date:
@@ -68,6 +75,7 @@ def main():
             end_date.strftime(DATE_FORMAT),
         ))
 
+    # Print out results.
     all_intervals = []
     out_lines = []
     for (d, intervals) in intervals_by_date:
