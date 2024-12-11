@@ -164,8 +164,8 @@ def process(lines):
         elif action == 'end':
             if len(current_interval) == 1:
                 current_interval.append(t)
-                if not (current_interval[0] < current_interval[1]):
-                    raise IntervalError('On line {}, found a backward interval.'.format(line_number))
+                if current_interval[0] > current_interval[1]:  # Sometimes I work past midnight.
+                    current_interval[1] += timedelta(days=1)
                 intervals_by_date[-1][1].append(tuple(current_interval))
                 current_interval = []
             else:
