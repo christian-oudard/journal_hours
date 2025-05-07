@@ -32,10 +32,19 @@ def main():
     # Parse start and end dates if they are given (inclusive date range).
     start_date = parse_date(args.start)
     end_date = parse_date(args.end)
+    if start_date is None and args.start is not None:
+        print('Invalid start date: {}'.format(args.start), file=sys.stderr)
+        sys.exit(1)
+    if end_date is None and args.end is not None:
+        print('Invalid end date: {}'.format(args.end), file=sys.stderr)
+        sys.exit(1)
+    if start_date is not None and end_date < start_date:
+        print('End date must be after start date.', file=sys.stderr)
+        sys.exit(1)
+
+    # If no end date is given, use all available intervals.
     if end_date is None:
         end_date = date.today()
-    if start_date is not None and end_date < start_date:
-        raise ValueError('End date must be after start date.')
 
     # Process journal file.
     with open(args.journal_file) as f:
